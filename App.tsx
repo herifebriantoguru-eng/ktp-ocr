@@ -6,7 +6,7 @@ import { KtpDetailModal } from './components/KtpDetailModal';
 import { extractKtpData } from './services/geminiService';
 import { AppState, KtpData, ViewMode } from './types';
 
-// GANTI DENGAN URL GOOGLE APPS SCRIPT ANDA
+// Masukkan URL Web App dari Google Apps Script Anda di sini
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbygPARkgikX9veIV0OCCV6MKnmnU7coFxJuQGd4oNUczrzZEH3BfjlvgfcTbCuWg4Vg/exec';
 
 const App: React.FC = () => {
@@ -30,7 +30,7 @@ const App: React.FC = () => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => console.warn("GPS nonaktif.")
+        () => console.warn("GPS tidak aktif.")
       );
     }
     fetchHistory();
@@ -61,7 +61,7 @@ const App: React.FC = () => {
       setState(prev => ({ 
         ...prev, 
         status: 'error', 
-        errorMessage: err.message
+        errorMessage: err.message || "Terjadi kesalahan sistem AI." 
       }));
     }
   };
@@ -99,7 +99,7 @@ const App: React.FC = () => {
       setTimeout(() => setShowToast(false), 3000);
       fetchHistory();
     } catch (err) {
-      alert("Error simpan data.");
+      alert("Error saat menyimpan ke Google Sheets.");
     } finally {
       setSaving(false);
     }
@@ -116,10 +116,10 @@ const App: React.FC = () => {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 py-5">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
-             <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white font-black italic shadow-lg shadow-red-100">MBG</div>
+             <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white font-black italic shadow-lg">MBG</div>
              <div>
                <h1 className="text-xl font-black text-slate-900 uppercase">ARSIP <span className="text-red-600">LANSIA</span></h1>
-               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sistem Digital Terpadu</p>
+               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sistem Digital Lapangan</p>
              </div>
           </div>
         </div>
@@ -131,15 +131,17 @@ const App: React.FC = () => {
             {state.status === 'idle' && (
               <div className="flex flex-col items-center gap-6 py-10">
                 <div className="text-center space-y-2 mb-4">
-                  <h2 className="text-3xl font-black text-slate-900 uppercase">Mulai Scan KTP</h2>
-                  <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Gunakan kamera untuk deteksi otomatis</p>
+                  <h2 className="text-3xl font-black text-slate-900 uppercase">Scan KTP Anda</h2>
+                  <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Klik tombol kamera di bawah</p>
                 </div>
+                
                 <CameraView onCapture={handleCapture} onActiveChange={setIsCameraActive} />
+                
                 {!isCameraActive && (
                   <div className="w-full max-w-sm space-y-3">
                     <label className="w-full flex items-center justify-center gap-3 px-6 py-5 bg-white border-2 border-slate-100 rounded-3xl hover:border-red-500 cursor-pointer transition-all shadow-sm">
                       <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                      <span className="font-black text-slate-700 text-xs uppercase tracking-widest">Pilih dari Galeri</span>
+                      <span className="font-black text-slate-700 text-xs uppercase tracking-widest">Pilih File Gambar</span>
                       <input type="file" className="hidden" accept="image/*" onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
@@ -149,7 +151,7 @@ const App: React.FC = () => {
                         }
                       }} />
                     </label>
-                    <button onClick={startManualInput} className="w-full py-5 bg-slate-50 border-2 border-dashed border-slate-200 text-slate-400 rounded-3xl font-black text-xs uppercase tracking-widest">Ketik Manual</button>
+                    <button onClick={startManualInput} className="w-full py-5 bg-slate-50 border-2 border-dashed border-slate-200 text-slate-400 rounded-3xl font-black text-xs uppercase tracking-widest">Lewati & Ketik Manual</button>
                   </div>
                 )}
               </div>
@@ -162,8 +164,8 @@ const App: React.FC = () => {
                   <div className="absolute inset-0 w-20 h-20 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 <div className="text-center">
-                  <h3 className="text-xl font-black text-slate-900 uppercase">AI SEDANG BEKERJA...</h3>
-                  <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest mt-1">Mengekstrak data dari gambar</p>
+                  <h3 className="text-xl font-black text-slate-900 uppercase">MENGHUBUNGI AI...</h3>
+                  <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest mt-1">Sabar sejenak, data sedang diproses</p>
                 </div>
               </div>
             )}
@@ -184,37 +186,47 @@ const App: React.FC = () => {
                 <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
                   <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
                 </div>
-                <h2 className="text-2xl font-black text-slate-900 uppercase">BERHASIL DISIMPAN</h2>
-                <button onClick={reset} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl">Input Baru</button>
+                <h2 className="text-2xl font-black text-slate-900 uppercase">DATA TERSIMPAN</h2>
+                <button onClick={reset} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest">Scan KTP Lain</button>
               </div>
             )}
 
             {state.status === 'error' && (
-              <div className="max-w-md mx-auto p-10 bg-white rounded-[2.5rem] shadow-xl border-2 border-red-50 text-center space-y-6">
+              <div className="max-w-md mx-auto p-10 bg-white rounded-[2.5rem] shadow-xl border-2 border-red-100 text-center space-y-6">
                 <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto">
                   <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                 </div>
-                <div className="space-y-3">
-                   <p className="text-red-600 font-black text-lg uppercase leading-tight">Gagal Mendeteksi KTP</p>
-                   <p className="text-slate-500 text-[11px] font-bold bg-slate-50 p-4 rounded-xl border border-slate-100">{state.errorMessage}</p>
-                   {state.errorMessage?.includes("REDEPLOY") && (
-                     <p className="text-emerald-600 text-[10px] font-black uppercase">Solusi: Buka Vercel > Deployments > Klik titik tiga > Redeploy</p>
-                   )}
+                <div className="space-y-4">
+                   <p className="text-red-600 font-black text-lg uppercase leading-tight">Terjadi Masalah</p>
+                   <div className="text-slate-500 text-[11px] font-bold bg-slate-50 p-5 rounded-2xl border border-slate-200 text-left">
+                     {state.errorMessage?.includes("KUNCI_") || state.errorMessage?.includes("API_KEY") ? (
+                       <div className="space-y-2">
+                         <p className="text-red-700 font-black">PENYEBAB: API KEY BERMASALAH</p>
+                         <p>1. Cek Vercel Settings {'>'} Env Variables.</p>
+                         <p>2. Pastikan ada nama <code className="bg-red-50 px-1">API_KEY</code>.</p>
+                         <p>3. Masukkan kunci baru dari Google AI Studio.</p>
+                         <p className="text-emerald-700 font-black pt-2">4. WAJIB KLIK 'REDEPLOY' DI TAB DEPLOYMENTS.</p>
+                       </div>
+                     ) : (
+                       <p>{state.errorMessage}</p>
+                     )}
+                   </div>
                 </div>
-                <button onClick={reset} className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest">Coba Lagi</button>
+                <button onClick={reset} className="w-full py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-red-100">Coba Ulangi</button>
               </div>
             )}
           </div>
         ) : (
           <div className="animate-in fade-in duration-500 space-y-8">
+            {/* List History View (tetap sama) */}
             <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white flex justify-between items-center shadow-2xl">
               <div>
-                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/50 mb-1">Database Cloud</h3>
-                <h2 className="text-3xl font-black uppercase tracking-tighter">DAFTAR <span className="text-red-500">ARSIP</span></h2>
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/50 mb-1">Database Lokal</h3>
+                <h2 className="text-3xl font-black uppercase tracking-tighter">DATA <span className="text-red-500">MASUK</span></h2>
               </div>
               <div className="text-right">
                 <span className="text-5xl font-black text-red-600 leading-none">{state.history.length}</span>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">Total Lansia</p>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-white/40">Total Arsip</p>
               </div>
             </div>
 
@@ -238,7 +250,7 @@ const App: React.FC = () => {
                 ))
               ) : (
                 <div className="py-24 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
-                   <p className="text-slate-300 font-black uppercase text-xs tracking-widest">Belum ada data masuk</p>
+                   <p className="text-slate-300 font-black uppercase text-xs tracking-widest">Belum ada data riwayat</p>
                 </div>
               )}
             </div>
@@ -246,11 +258,11 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-slate-900/95 backdrop-blur-2xl p-2.5 rounded-full shadow-2xl flex gap-2 z-[60]">
-        <button onClick={() => setState(prev => ({ ...prev, viewMode: 'scanner' }))} className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-full transition-all ${state.viewMode === 'scanner' ? 'bg-red-600 text-white font-black' : 'text-slate-400 font-bold'}`}>
-          <span className="text-[10px] uppercase tracking-widest">Scanner</span>
+      <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-slate-900/95 backdrop-blur-2xl p-2.5 rounded-full shadow-2xl flex gap-2 z-[60] border border-white/10">
+        <button onClick={() => setState(prev => ({ ...prev, viewMode: 'scanner' }))} className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-full transition-all ${state.viewMode === 'scanner' ? 'bg-red-600 text-white font-black shadow-lg shadow-red-500/20' : 'text-slate-400 font-bold hover:text-white'}`}>
+          <span className="text-[10px] uppercase tracking-widest">Scan KTP</span>
         </button>
-        <button onClick={() => setState(prev => ({ ...prev, viewMode: 'history' }))} className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-full transition-all ${state.viewMode === 'history' ? 'bg-red-600 text-white font-black' : 'text-slate-400 font-bold'}`}>
+        <button onClick={() => setState(prev => ({ ...prev, viewMode: 'history' }))} className={`flex-1 flex items-center justify-center gap-2 py-4 rounded-full transition-all ${state.viewMode === 'history' ? 'bg-red-600 text-white font-black shadow-lg shadow-red-500/20' : 'text-slate-400 font-bold hover:text-white'}`}>
           <span className="text-[10px] uppercase tracking-widest">Riwayat</span>
         </button>
       </nav>
@@ -258,7 +270,7 @@ const App: React.FC = () => {
       {showToast && (
         <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-12 duration-500">
            <div className="bg-emerald-600 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-4">
-              <span className="text-[10px] font-black uppercase tracking-widest">Data Tersimpan ke Cloud!</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">Selesai Disimpan ke Cloud</span>
            </div>
         </div>
       )}
