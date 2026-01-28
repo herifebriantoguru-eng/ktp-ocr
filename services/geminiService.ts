@@ -3,23 +3,32 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { KtpData } from "../types";
 
 /**
- * Fungsi deteksi kunci yang lebih kuat
+ * Fungsi deteksi kunci yang aman dari crash browser
  */
 const getApiKey = () => {
-  // Cek berbagai kemungkinan lokasi penyimpanan variable di browser
-  const key = process.env.API_KEY || (window as any).process?.env?.API_KEY;
-  
-  if (!key || key === "undefined" || key === "null" || key.trim() === "") {
-    return null;
+  try {
+    // 1. Cek process.env secara aman
+    if (typeof process !== 'undefined' && process.env?.API_KEY) {
+      return process.env.API_KEY;
+    }
+    // 2. Cek window.process (beberapa environment preview)
+    const win = window as any;
+    if (win.process?.env?.API_KEY) {
+      return win.process.env.API_KEY;
+    }
+    // 3. Cek variabel global cadangan
+    if (win.API_KEY) return win.API_KEY;
+  } catch (e) {
+    console.warn("Gagal mengakses environment variables:", e);
   }
-  return key;
+  return null;
 };
 
 export const extractKtpData = async (base64Image: string): Promise<KtpData> => {
   const apiKey = getApiKey();
   
-  if (!apiKey) {
-    throw new Error("KUNCI_TIDAK_TERDETEKSI: Aplikasi tidak bisa menemukan API_KEY. \n\nCara memperbaiki: \n1. Buka Dashboard Vercel \n2. Ke Settings > Environment Variables \n3. Pastikan namanya tepat: API_KEY \n4. Pastikan nilainya diawali 'AIza...' \n5. WAJIB KLIK REDEPLOY di tab Deployments.");
+  if (!apiKey || apiKey === "undefined" || apiKey === "null") {
+    throw new Error("KUNCI_TIDAK_TERDETEKSI: API_KEY masih kosong di aplikasi. \n\nLangkah Wajib: \n1. Pastikan sudah klik 'Save' di Vercel Settings. \n2. Buka tab 'Deployments' di Vercel. \n3. Klik titik tiga (...) pada baris teratas, lalu klik 'REDEPLOY'.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -76,7 +85,7 @@ export const extractKtpData = async (base64Image: string): Promise<KtpData> => {
     console.error("Gemini Error:", error);
     
     if (error.message?.includes("API key not valid")) {
-      throw new Error("KUNCI_SALAH: Kunci yang Anda masukkan ke Vercel tidak valid atau ada karakter yang terpotong saat copy-paste.");
+      throw new Error("KUNCI_TIDAK_VALID: Kunci API salah. Salin ulang dari Google AI Studio.");
     }
     
     throw new Error(error.message || "Gagal memproses gambar.");
