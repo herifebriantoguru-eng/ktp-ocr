@@ -6,6 +6,11 @@ import { KtpDetailModal } from './components/KtpDetailModal';
 import { extractKtpData } from './services/geminiService';
 import { AppState, KtpData, ViewMode } from './types';
 
+/**
+ * PANDUAN PENTING:
+ * 1. Pastikan API_KEY sudah dimasukkan di Vercel Settings -> Environment Variables.
+ * 2. Ganti GAS_URL di bawah dengan URL dari Google Apps Script Anda (yang berakhiran /exec).
+ */
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbygPARkgikX9veIV0OCCV6MKnmnU7coFxJuQGd4oNUczrzZEH3BfjlvgfcTbCuWg4Vg/exec';
 
 const App: React.FC = () => {
@@ -29,7 +34,7 @@ const App: React.FC = () => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => console.warn("Geolocation access denied", err)
+        (err) => console.warn("Akses lokasi ditolak. Data lokasi tidak akan tersimpan.", err)
       );
     }
     fetchHistory();
@@ -47,7 +52,7 @@ const App: React.FC = () => {
         setState(prev => ({ ...prev, history: result.data || [] }));
       }
     } catch (err) {
-      console.error("History fetch error:", err);
+      console.error("Gagal memuat riwayat:", err);
     } finally {
       setLoadingHistory(false);
     }
@@ -58,7 +63,7 @@ const App: React.FC = () => {
     setIsCameraActive(false);
     try {
       const data = await extractKtpData(base64);
-      // Clean up extracted data (Uppercase all except dates)
+      // Format data agar semua huruf besar kecuali tanggal
       const formattedData: KtpData = Object.keys(data).reduce((acc, key) => {
         const val = (data as any)[key];
         (acc as any)[key] = (typeof val === 'string' && key !== 'tanggalLahir') ? val.toUpperCase() : val;
@@ -70,7 +75,7 @@ const App: React.FC = () => {
       setState(prev => ({ 
         ...prev, 
         status: 'error', 
-        errorMessage: err.message || "Gagal memproses gambar." 
+        errorMessage: err.message || "Gagal memproses gambar. Pastikan API_KEY sudah benar." 
       }));
     }
   };
@@ -112,8 +117,8 @@ const App: React.FC = () => {
       setTimeout(() => setShowToast(false), 3000);
       fetchHistory();
     } catch (err) {
-      console.error("Save error:", err);
-      alert("Terjadi kesalahan teknis. Mohon periksa koneksi internet.");
+      console.error("Gagal menyimpan ke Sheet:", err);
+      alert("Terjadi kesalahan teknis saat menyimpan ke Google Sheets.");
     } finally {
       setSaving(false);
     }
@@ -129,7 +134,6 @@ const App: React.FC = () => {
     }));
   };
 
-  // Function to change the current view mode between 'scanner' and 'history'
   const changeView = (mode: ViewMode) => {
     setState(prev => ({ ...prev, viewMode: mode }));
   };
@@ -138,20 +142,19 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-[#FDFDFD] pb-32">
       <KtpDetailModal data={selectedDetail} onClose={() => setSelectedDetail(null)} />
       
-      {/* HEADER SECTION */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 py-5">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-6 py-5 shadow-sm">
         <div className="max-w-4xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white font-black italic shadow-lg shadow-red-100">MBG</div>
              <div>
                <h1 className="text-xl font-black text-slate-900 tracking-tight leading-none uppercase">ARSIP <span className="text-red-600">LANSIA</span></h1>
-               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Sistem Pendataan Terpadu</p>
+               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Digital Identity Verification</p>
              </div>
           </div>
           {location && (
             <div className="hidden sm:flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full border border-emerald-100">
               <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-              <span className="text-[9px] font-black uppercase tracking-widest">GPS Active</span>
+              <span className="text-[9px] font-black uppercase tracking-widest">GPS Aktif</span>
             </div>
           )}
         </div>
@@ -164,7 +167,7 @@ const App: React.FC = () => {
               <div className="flex flex-col items-center gap-6 animate-in fade-in duration-500 py-10">
                 <div className="text-center space-y-2 mb-4">
                   <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase">Mulai Pendataan</h2>
-                  <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Pilih metode pengambilan data KTP</p>
+                  <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Gunakan kamera untuk deteksi data otomatis</p>
                 </div>
                 
                 <CameraView onCapture={handleCapture} onActiveChange={setIsCameraActive} />
@@ -173,7 +176,7 @@ const App: React.FC = () => {
                   <div className="w-full max-w-sm space-y-3">
                     <label className="w-full flex items-center justify-center gap-3 px-6 py-5 bg-white border-2 border-slate-100 rounded-3xl hover:border-red-500 transition-all cursor-pointer group shadow-sm">
                       <svg className="w-6 h-6 text-slate-400 group-hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                      <span className="font-black text-slate-700 group-hover:text-red-600 text-xs uppercase tracking-[0.2em]">Upload dari Galeri</span>
+                      <span className="font-black text-slate-700 group-hover:text-red-600 text-xs uppercase tracking-[0.2em]">Pilih dari Galeri</span>
                       <input type="file" className="hidden" accept="image/*" onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
@@ -189,7 +192,7 @@ const App: React.FC = () => {
                       className="w-full flex items-center justify-center gap-3 px-6 py-5 bg-slate-50 border-2 border-dashed border-slate-200 text-slate-400 rounded-3xl hover:border-slate-400 hover:text-slate-600 transition-all active:scale-95"
                     >
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                      <span className="font-black text-xs uppercase tracking-[0.2em]">Input Data Manual</span>
+                      <span className="font-black text-xs uppercase tracking-[0.2em]">Ketik Data Manual</span>
                     </button>
                   </div>
                 )}
@@ -206,8 +209,8 @@ const App: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-center">
-                  <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">AI MENGANALISA...</h3>
-                  <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">Mohon tunggu sebentar</p>
+                  <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">AI SEDANG BEKERJA...</h3>
+                  <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">Ekstraksi teks dari gambar KTP</p>
                 </div>
               </div>
             )}
@@ -231,10 +234,10 @@ const App: React.FC = () => {
                   <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>
                 </div>
                 <div>
-                  <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">DATA TERSIMPAN</h2>
-                  <p className="text-slate-400 font-bold text-xs mt-2">Data lansia berhasil masuk database.</p>
+                  <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter">BERHASIL DISIMPAN</h2>
+                  <p className="text-slate-400 font-bold text-xs mt-2">Data lansia telah masuk ke database pusat.</p>
                 </div>
-                <button onClick={reset} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all shadow-xl shadow-slate-200">Input Baru</button>
+                <button onClick={reset} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all shadow-xl shadow-slate-200">Input Data Baru</button>
               </div>
             )}
 
@@ -266,9 +269,9 @@ const App: React.FC = () => {
 
             <div className="space-y-4">
               <div className="flex justify-between items-center px-2">
-                 <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Data Terakhir</h2>
+                 <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Daftar Terkini</h2>
                  <button onClick={fetchHistory} className={`p-3 bg-white text-slate-400 hover:text-red-600 rounded-2xl shadow-sm border border-slate-100 transition-all ${loadingHistory ? 'animate-spin' : ''}`}>
-                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357-2H15" /></svg>
                  </button>
               </div>
 
@@ -288,7 +291,7 @@ const App: React.FC = () => {
                           <h4 className="font-black text-slate-900 uppercase tracking-tight leading-none mb-1.5">{item.nama}</h4>
                           <p className="text-[10px] font-bold text-red-600 tracking-widest uppercase mb-1">{item.nik}</p>
                           <div className="flex items-center gap-3">
-                             <span className="text-[8px] font-black bg-slate-100 px-3 py-1 rounded-full uppercase text-slate-400 tracking-widest">{item.kelDesa || 'N/A'}</span>
+                             <span className="text-[8px] font-black bg-slate-100 px-3 py-1 rounded-full uppercase text-slate-400 tracking-widest">{item.kelDesa || 'UMUM'}</span>
                              {item.latitude && <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">📍 Berlokasi</span>}
                           </div>
                         </div>
@@ -301,7 +304,7 @@ const App: React.FC = () => {
                 </div>
               ) : (
                 <div className="py-24 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
-                   <p className="text-slate-300 font-black uppercase text-xs tracking-widest">Belum Ada Data</p>
+                   <p className="text-slate-300 font-black uppercase text-xs tracking-widest">Database Kosong</p>
                 </div>
               )}
             </div>
@@ -309,13 +312,12 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* BOTTOM NAVIGATION BAR */}
       <nav className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[90%] max-w-sm bg-slate-900/95 backdrop-blur-2xl p-2.5 rounded-full shadow-2xl flex gap-2 z-[60] border border-white/10">
         <button 
           onClick={() => changeView('scanner')}
           className={`flex-1 flex items-center justify-center gap-2.5 py-4 rounded-full transition-all ${state.viewMode === 'scanner' ? 'bg-red-600 text-white shadow-lg shadow-red-500/20 font-black' : 'text-slate-400 hover:text-white font-bold'}`}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812-1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /></svg>
           <span className="text-[10px] uppercase tracking-widest">Scanner</span>
         </button>
         <button 
@@ -327,14 +329,13 @@ const App: React.FC = () => {
         </button>
       </nav>
 
-      {/* TOAST SUCCESS */}
       {showToast && (
         <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-12 duration-500">
            <div className="bg-emerald-600 text-white px-8 py-4 rounded-[2rem] shadow-2xl flex items-center gap-4 border border-emerald-400">
               <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest">Sinkronisasi Berhasil!</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">Sinkronisasi Data Berhasil!</span>
            </div>
         </div>
       )}
