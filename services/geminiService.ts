@@ -2,11 +2,24 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { KtpData } from "../types";
 
-export const extractKtpData = async (base64Image: string): Promise<KtpData> => {
-  const apiKey = process.env.API_KEY;
+/**
+ * Fungsi deteksi kunci yang lebih kuat
+ */
+const getApiKey = () => {
+  // Cek berbagai kemungkinan lokasi penyimpanan variable di browser
+  const key = process.env.API_KEY || (window as any).process?.env?.API_KEY;
   
-  if (!apiKey || apiKey === "undefined" || apiKey.length < 10) {
-    throw new Error("KUNCI_TIDAK_ADA: API_KEY belum terdeteksi di Vercel. Silakan tambahkan di Settings > Env Variables, lalu klik REDEPLOY.");
+  if (!key || key === "undefined" || key === "null" || key.trim() === "") {
+    return null;
+  }
+  return key;
+};
+
+export const extractKtpData = async (base64Image: string): Promise<KtpData> => {
+  const apiKey = getApiKey();
+  
+  if (!apiKey) {
+    throw new Error("KUNCI_TIDAK_TERDETEKSI: Aplikasi tidak bisa menemukan API_KEY. \n\nCara memperbaiki: \n1. Buka Dashboard Vercel \n2. Ke Settings > Environment Variables \n3. Pastikan namanya tepat: API_KEY \n4. Pastikan nilainya diawali 'AIza...' \n5. WAJIB KLIK REDEPLOY di tab Deployments.");
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -24,7 +37,7 @@ export const extractKtpData = async (base64Image: string): Promise<KtpData> => {
             },
           },
           {
-            text: `Ekstrak data KTP Indonesia ini ke JSON. Gunakan HURUF KAPITAL. nik 16 digit.`,
+            text: `Ekstrak data KTP Indonesia ini ke JSON. Gunakan HURUF KAPITAL. NIK harus 16 digit.`,
           },
         ],
       },
@@ -56,22 +69,16 @@ export const extractKtpData = async (base64Image: string): Promise<KtpData> => {
     });
 
     const jsonStr = response.text;
-    if (!jsonStr) throw new Error("AI tidak memberikan respon teks.");
+    if (!jsonStr) throw new Error("Gagal mengambil teks dari AI.");
     
     return JSON.parse(jsonStr) as KtpData;
   } catch (error: any) {
-    console.error("Gemini Error Detail:", error);
+    console.error("Gemini Error:", error);
     
-    // Menangkap error spesifik terkait API Key
-    const msg = error.message || "";
-    if (msg.includes("403") || msg.includes("401") || msg.includes("API key")) {
-      throw new Error("KUNCI_SALAH: API Key Anda tidak valid, kadaluarsa, atau ditolak oleh Google. Pastikan Anda menyalin kunci dengan benar dari Google AI Studio.");
+    if (error.message?.includes("API key not valid")) {
+      throw new Error("KUNCI_SALAH: Kunci yang Anda masukkan ke Vercel tidak valid atau ada karakter yang terpotong saat copy-paste.");
     }
     
-    if (msg.includes("429")) {
-      throw new Error("LIMIT_AI: Kuota AI gratis Anda habis untuk saat ini. Tunggu beberapa menit lalu coba lagi.");
-    }
-
-    throw new Error(msg || "Gagal memproses gambar. Pastikan foto KTP jelas dan tidak buram.");
+    throw new Error(error.message || "Gagal memproses gambar.");
   }
 };
