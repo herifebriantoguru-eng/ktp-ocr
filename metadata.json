@@ -1,0 +1,8 @@
+{
+  "name": "KTP MBG Scanner Pro",
+  "description": "Advanced KTP Scanner with Geotagging and Data Validation for Field Operations.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
